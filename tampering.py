@@ -34,17 +34,15 @@ class Tampering(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface
                 ]
     def run(self):
         return renderers.TreeGrid(
-            self._columns = [
+            columns = [
                 # name_column = value_column
             ],
-            self._generator(
+            generator = self.generator(
                 # da decidere see fare _printkey_iterator o _registry_walker, guardare meglio printkey.py
                 printkey.Printkey._printkey_iterator(
                     self.context,
                     kernel.layer_name,
-                    kernel.symbol_table_name,
-                    filter_func = filter_func
-                )
-            )
+                    kernel.symbol_table_name
+                ),
+            ),
         )
-        
