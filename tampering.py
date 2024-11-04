@@ -6,16 +6,17 @@ import codecs
 import contextlib
 
 from typing import Any, Generator, List, Tuple
-from volatility3.framework import constants, exceptions, interfaces, renderers
+from volatility3.framework import objects, constants, exceptions, interfaces, renderers
 from volatility3.framework.configuration import requirements
-from volatility3.framework.layers.registry import RegistryHive
 from volatility3.framework.layers.physical import BufferDataLayer
 from volatility3.framework.symbols import intermed
 from volatility3.framework.renderers import TreeGrid, conversion, format_hints
-from volatility3.plugins.windows.registry import hivelist
-from volatility3.plugins.windows.registry import printkey
 from volatility3.plugins import timeliner
+from volatility3.plugins.windows.registry import *
 
+#from volatility3.plugins.windows.registry import hivelist
+#from volatility3.plugins.windows.registry import printkey
+#from volatility3.framework.layers.registry import RegistryHive, RegistryFormatException
 
 vollog = logging.getLogger(__name__)
 
