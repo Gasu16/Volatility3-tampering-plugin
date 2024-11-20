@@ -53,13 +53,21 @@ class Tampering(interfaces.plugins.PluginInterface):
         #get Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender\Features
         #aReg = winreg.ConnectRegistry(None, winreg.HKEY_LOCAL_MACHINE)
         #aKey = winreg.OpenKey(aReg, r"SOFTWARE\\Microsoft\\Windows Defender\\Features")
+        l = []
         aReg = winreg.ConnectRegistry(None, root_hive)
         aKey = winreg.OpenKey(aReg, key)
-        print(r"reading from %s" % aKey)
         sValue = winreg.QueryValueEx(aKey, value)
-        qinfokey = winreg.QueryInfoKey(aKey)
-        print(f"The key value is: ",sValue[0])
-        print(f"Last modified: ",qinfokey[2])
+        l.append(aReg)
+        l.append(aKey)
+        l.append(sValue)
+        #print(str(l))
+        return l
+        # volendo forse si può far ritornare solo sValue[0]
+        # ritornare questi valori in una tupla/lista/qualcosa
+        #qinfokey = winreg.QueryInfoKey(aKey)
+        #print(r"reading from %s" % aKey)
+        #print(f"The key value is: ",sValue[0])
+        #print(f"Last modified: ",qinfokey[2])
         
     @classmethod
     def print_tampering_keys(self): # Static Keys for tampering took from Windows registry
@@ -70,13 +78,26 @@ class Tampering(interfaces.plugins.PluginInterface):
         kernel = self.context.modules[self.config['kernel']]
         automagics = automagic.choose_automagic(automagic.available(self._context), hivelist.HiveList)
         plugin = plugins.construct_plugin(self.context, automagics, hivelist.HiveList, self.config_path, self._progress_callback, self.open)
+        root_hive = winreg.HKEY_LOCAL_MACHINE
+        key = "SOFTWARE\\Microsoft\\Windows Defender\\Features" # cambiare qui il valore
+        value = "TamperProtection" # cambiare qui il valore
         
         return renderers.TreeGrid([
                                    ("Root Hive", str),
                                    ("Key", str),
                                    ("Value", str)],
-                                   self._generator(winreg.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows Defender\\Features", "TamperProtection"),
+                                   #self._generator(root_hive_, key_, value_),
+                                   self._generator(root_hive, key, value),
                                    )
     def _generator(self, root_hive, key, value):
-        print(f"hello world, I'm in the _generator func right now")
-        self.get_tampering_key(root_hive, key, value)
+        #print(f"hello world, I'm in the _generator func right now")
+        args_ = self.get_tampering_key(root_hive, key, value)
+        #root_hive_ = args_[0] #useless
+        #key_ = args_[1] #useless
+        value_ = args_[2]
+        #print("Inizio args_")
+        #print(root_hive_)
+        #print(key_)
+        #print(value_[0])
+        #print("Fine args_")
+        yield (0, (str(root_hive), str(key), str(value_[0])))
