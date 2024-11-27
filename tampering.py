@@ -26,14 +26,39 @@ vollog = logging.getLogger(__name__)
 roots_hives = [
     "HKEY_CLASSES_ROOT",
     "HKEY_CURRENT_USER",
-    "HKEY_LOCAL_MACHINE",
+    "HKEY_LOCAL_MACHINE", # Constant
     "HKEY_USERS",
     "HKEY_PERFORMANCE_DATA",
     "HKEY_CURRENT_CONFIG",
     "HKEY_DYN_DATA"
 ]
 
-tampering_hives = []
+tampering_keys = [
+    "SOFTWARE\\Microsoft\\Windows Defender", # DisableAntiSpyware; DisableAntiVirus; IsServiceRunning; PUAProtection;
+    "SOFTWARE\\Microsoft\\Windows Defender\\Features", # TamperProtection; TamperProtectionSource; TPExclusions;
+    "SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection", # Default; DpaDisabled;
+    "SOFTWARE\\Microsoft\\Windows Defender\\Remediation\\Behavioral Network Blocks", # Default;
+    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates" # SignatureLastUpdated; SignatureType; SignatureUpdateCount; SignatureUpdateLastAttempted; SignatureUpdatePending;
+]
+
+tampering_values = [
+    "DisableAntiSpyware",
+    "DisableAntiVirus",
+    "IsServiceRunning",
+    "PUAProtection",
+    "TamperProtection",
+    "TamperProtectionSource",
+    "TPExclusions",
+    "Default",
+    "DpaDisabled",
+    "SignatureLastUpdated",
+    "SignatureType",
+    "SignatureUpdateCount",
+    "SignatureUpdateLastAttempted",
+    "SignatureUpdatePending"
+]
+
+# tampering_ttps = []
 
 class Tampering(interfaces.plugins.PluginInterface):
     _required_framework_version = (2, 0, 0)
@@ -50,54 +75,34 @@ class Tampering(interfaces.plugins.PluginInterface):
                 ]
     @classmethod
     def get_tampering_key(cls, root_hive, key, value):
-        #get Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender\Features
-        #aReg = winreg.ConnectRegistry(None, winreg.HKEY_LOCAL_MACHINE)
-        #aKey = winreg.OpenKey(aReg, r"SOFTWARE\\Microsoft\\Windows Defender\\Features")
         l = []
         aReg = winreg.ConnectRegistry(None, root_hive)
-        aKey = winreg.OpenKey(aReg, key)
+        aKey = winreg.OpenKeyEx(aReg, key)
         sValue = winreg.QueryValueEx(aKey, value)
         l.append(aReg)
         l.append(aKey)
         l.append(sValue)
-        #print(str(l))
         return l
-        # volendo forse si può far ritornare solo sValue[0]
-        # ritornare questi valori in una tupla/lista/qualcosa
-        #qinfokey = winreg.QueryInfoKey(aKey)
-        #print(r"reading from %s" % aKey)
-        #print(f"The key value is: ",sValue[0])
-        #print(f"Last modified: ",qinfokey[2])
-        
-    @classmethod
-    def print_tampering_keys(self): # Static Keys for tampering took from Windows registry
-        print(f"Ce l'ho fattaaaaa")
-        
         
     def run(self):
         kernel = self.context.modules[self.config['kernel']]
         automagics = automagic.choose_automagic(automagic.available(self._context), hivelist.HiveList)
         plugin = plugins.construct_plugin(self.context, automagics, hivelist.HiveList, self.config_path, self._progress_callback, self.open)
         root_hive = winreg.HKEY_LOCAL_MACHINE
-        key = "SOFTWARE\\Microsoft\\Windows Defender\\Features" # cambiare qui il valore
-        value = "TamperProtection" # cambiare qui il valore
         
         return renderers.TreeGrid([
                                    ("Root Hive", str),
                                    ("Key", str),
                                    ("Value", str)],
-                                   #self._generator(root_hive_, key_, value_),
-                                   self._generator(root_hive, key, value),
+                                   self._generator(),
                                    )
-    def _generator(self, root_hive, key, value):
-        #print(f"hello world, I'm in the _generator func right now")
-        args_ = self.get_tampering_key(root_hive, key, value)
-        #root_hive_ = args_[0] #useless
-        #key_ = args_[1] #useless
-        value_ = args_[2]
-        #print("Inizio args_")
-        #print(root_hive_)
-        #print(key_)
-        #print(value_[0])
-        #print("Fine args_")
-        yield (0, (str(root_hive), str(key), str(value_[0])))
+    def _generator(self):
+        root_hive = winreg.HKEY_LOCAL_MACHINE
+        for _keys in tampering_keys:
+            for _values in tampering_values:
+                try:
+                    args_ = self.get_tampering_key(root_hive, _keys, _values)
+                    value_ = args_[2] # extract value field from tuple
+                    yield (0, (str(root_hive), str(_keys), str(value_[0])))
+                except FileNotFoundError:
+                    continue
