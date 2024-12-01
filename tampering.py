@@ -67,7 +67,7 @@ tampering_events_files = [
 ]
 
 tampering_events_id = [
-    "4",
+    "5",
     "5004",
     "5007",
     "5008",
@@ -109,7 +109,10 @@ class Tampering(interfaces.plugins.PluginInterface):
         # https://learn.microsoft.com/en-us/defender-endpoint/troubleshoot-microsoft-defender-antivirus
         # Event Viewer > Applications and Services Logs > Microsoft > Windows > Windows Defender > Operational
         # detect for events: 5004, 5007, 5008, 5010, 5012, 5013, 5100, 5101
-        #query_handle = win32evtlog.EvtQuery("C:\\Windows\\System32\\winevt\\Logs\\Microsoft-Windows-Windows Defender%4Operational.evtx", win32evtlog.EvtQueryFilePath)
+        # https://medium.com/csis-techblog/silencing-microsoft-defender-for-endpoint-using-firewall-rules-3839a8bf8d18
+        # Event Viewer > Applications and Services Logs > Microsoft > Windows > SENSE > Operational
+        # detect for events: 5
+        
         query_handle = win32evtlog.EvtQuery(event_file, win32evtlog.EvtQueryFilePath)        
         print(query_handle)
         read_count = 0
@@ -170,4 +173,8 @@ class Tampering(interfaces.plugins.PluginInterface):
                 except FileNotFoundError:
                     continue
         for _events in tampering_events_files:
-            self.detect_tampering_attempts(_events)
+            try:
+                self.detect_tampering_attempts(_events)
+            except Exception:
+                print("\nYou need to run this plugin as Administrator if you want to get the event logs info")
+                break
