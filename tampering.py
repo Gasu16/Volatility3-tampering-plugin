@@ -5,6 +5,9 @@ import json
 import codecs
 import contextlib
 import winreg
+import win32evtlog
+import xml.etree.ElementTree as ET
+#from winevt import EventLog
 
 from typing import Any, Generator, List, Tuple, Sequence, Iterable
 from volatility3.framework import automagic, objects, constants, exceptions, interfaces, renderers, plugins
@@ -58,7 +61,16 @@ tampering_values = [
     "SignatureUpdatePending"
 ]
 
-# tampering_ttps = []
+tampering_events_id = [
+    "5004",
+    "5007",
+    "5008",
+    "5010",
+    "5012",
+    "5013",
+    "5100",
+    "5101"
+]
 
 class Tampering(interfaces.plugins.PluginInterface):
     _required_framework_version = (2, 0, 0)
@@ -79,13 +91,51 @@ class Tampering(interfaces.plugins.PluginInterface):
         aKey = winreg.OpenKeyEx(aReg, key)
         sValue = winreg.QueryValueEx(aKey, value)
         eData = winreg.EnumValue(aKey, 0)
-        #print(value)
         l = []
         l.append(aReg)
         l.append(aKey)
         l.append(value)
         l.append(sValue)
         return l
+    
+    @classmethod
+    def detect_tampering_attempts(cls):
+        # https://learn.microsoft.com/en-us/defender-endpoint/troubleshoot-microsoft-defender-antivirus
+        # Event Viewer > Applications and Services Logs > Microsoft > Windows > Windows Defender > Operational
+        # detect for events: 5004, 5007, 5008, 5010, 5012, 5013, 5100, 5101
+        query_handle = win32evtlog.EvtQuery("C:\\Windows\\System32\\winevt\\Logs\\Microsoft-Windows-Windows Defender%4Operational.evtx", win32evtlog.EvtQueryFilePath)       
+        print(query_handle)
+        read_count = 0
+        while True:
+            # read 100 records
+            events = win32evtlog.EvtNext(query_handle, 10)
+            read_count += len(events)
+            # if there is no record break the loop
+            if len(events) == 0:
+                break
+            for event in events:
+                xml_content = win32evtlog.EvtRender(event, win32evtlog.EvtRenderEventXml)
+                # print(xml_content)
+
+                # parse xml content
+                xml = ET.fromstring(xml_content)
+                # xml namespace, root element has a xmlns definition, so we have to use the namespace
+                ns = '{http://schemas.microsoft.com/win/2004/08/events/event}'
+
+                event_id = xml.find(f'.//{ns}EventID').text
+                level = xml.find(f'.//{ns}Level').text
+                channel = xml.find(f'.//{ns}Channel').text
+                execution = xml.find(f'.//{ns}Execution')
+                process_id = execution.get('ProcessID')
+                thread_id = execution.get('ThreadID')
+                time_created = xml.find(f'.//{ns}TimeCreated').get('SystemTime')
+                if event_id in tampering_events_id:
+                    print(f'Time: {time_created}, Level: {level} Event Id: {event_id}, Channel: {channel}, Process Id: {process_id}, Thread Id: {thread_id}')
+                user_data = xml.find(f'.//{ns}UserData')
+                # user_data has possible any data
+        print(f'Read {read_count} records')
+        return
+        
         
     def run(self):
         #kernel = self.context.modules[self.config['kernel']]
@@ -112,3 +162,4 @@ class Tampering(interfaces.plugins.PluginInterface):
                     yield (0, (str(root_hive), str(_keys), str(data_), str(value_[0])))
                 except FileNotFoundError:
                     continue
+        self.detect_tampering_attempts()
