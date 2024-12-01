@@ -10,7 +10,6 @@ What is tampering? It's an attempt to avoid detection after compromising a machi
 Which OS are supported? Windows, MacOS, GNU/Linux
 
 What are the ways to disable/tamper Windows Defender?
-- https://cloudbrothers.info/en/edr-silencers-exploring-methods-block-edr-communication-part-1/
 - collect logs (event log 5013 specifically) to detect any tampering attempts
 - sc.exe query|config|stop WinDefend
 - Change registry key
