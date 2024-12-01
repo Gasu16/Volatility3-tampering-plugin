@@ -75,34 +75,41 @@ class Tampering(interfaces.plugins.PluginInterface):
                 ]
     @classmethod
     def get_tampering_key(cls, root_hive, key, value):
-        l = []
         aReg = winreg.ConnectRegistry(None, root_hive)
         aKey = winreg.OpenKeyEx(aReg, key)
         sValue = winreg.QueryValueEx(aKey, value)
+        eData = winreg.EnumValue(aKey, 0)
+        
+        l = []
         l.append(aReg)
         l.append(aKey)
         l.append(sValue)
+        l.append(eData)
         return l
         
     def run(self):
-        kernel = self.context.modules[self.config['kernel']]
-        automagics = automagic.choose_automagic(automagic.available(self._context), hivelist.HiveList)
-        plugin = plugins.construct_plugin(self.context, automagics, hivelist.HiveList, self.config_path, self._progress_callback, self.open)
-        root_hive = winreg.HKEY_LOCAL_MACHINE
+        #kernel = self.context.modules[self.config['kernel']]
+        #automagics = automagic.choose_automagic(automagic.available(self._context), hivelist.HiveList)
+        #plugin = plugins.construct_plugin(self.context, automagics, hivelist.HiveList, self.config_path, self._progress_callback, self.open)
+        #root_hive = winreg.HKEY_LOCAL_MACHINE
         
         return renderers.TreeGrid([
                                    ("Root Hive", str),
                                    ("Key", str),
+                                   ("Data Name", str),
                                    ("Value", str)],
                                    self._generator(),
                                    )
     def _generator(self):
         root_hive = winreg.HKEY_LOCAL_MACHINE
+        
         for _keys in tampering_keys:
             for _values in tampering_values:
                 try:
                     args_ = self.get_tampering_key(root_hive, _keys, _values)
                     value_ = args_[2] # extract value field from tuple
-                    yield (0, (str(root_hive), str(_keys), str(value_[0])))
+                    data_ = args_[3] # extract name value data
+                    eData = data_[0]
+                    yield (0, (str(root_hive), str(_keys), str(eData), str(value_[0])))
                 except FileNotFoundError:
                     continue
