@@ -61,7 +61,13 @@ tampering_values = [
     "SignatureUpdatePending"
 ]
 
+tampering_events_files = [
+    "C:\\Windows\\System32\\winevt\\Logs\\Microsoft-Windows-Windows Defender%4Operational.evtx",
+    "C:\\Windows\\System32\\winevt\\Logs\\Microsoft-Windows-SENSE%4Operational.evtx"
+]
+
 tampering_events_id = [
+    "4",
     "5004",
     "5007",
     "5008",
@@ -99,16 +105,18 @@ class Tampering(interfaces.plugins.PluginInterface):
         return l
     
     @classmethod
-    def detect_tampering_attempts(cls):
+    def detect_tampering_attempts(cls, event_file):
         # https://learn.microsoft.com/en-us/defender-endpoint/troubleshoot-microsoft-defender-antivirus
         # Event Viewer > Applications and Services Logs > Microsoft > Windows > Windows Defender > Operational
         # detect for events: 5004, 5007, 5008, 5010, 5012, 5013, 5100, 5101
-        query_handle = win32evtlog.EvtQuery("C:\\Windows\\System32\\winevt\\Logs\\Microsoft-Windows-Windows Defender%4Operational.evtx", win32evtlog.EvtQueryFilePath)       
+        #query_handle = win32evtlog.EvtQuery("C:\\Windows\\System32\\winevt\\Logs\\Microsoft-Windows-Windows Defender%4Operational.evtx", win32evtlog.EvtQueryFilePath)
+        query_handle = win32evtlog.EvtQuery(event_file, win32evtlog.EvtQueryFilePath)        
         print(query_handle)
         read_count = 0
+        n = 100
         while True:
             # read 100 records
-            events = win32evtlog.EvtNext(query_handle, 10)
+            events = win32evtlog.EvtNext(query_handle, n)
             read_count += len(events)
             # if there is no record break the loop
             if len(events) == 0:
@@ -121,7 +129,6 @@ class Tampering(interfaces.plugins.PluginInterface):
                 xml = ET.fromstring(xml_content)
                 # xml namespace, root element has a xmlns definition, so we have to use the namespace
                 ns = '{http://schemas.microsoft.com/win/2004/08/events/event}'
-
                 event_id = xml.find(f'.//{ns}EventID').text
                 level = xml.find(f'.//{ns}Level').text
                 channel = xml.find(f'.//{ns}Channel').text
@@ -162,4 +169,5 @@ class Tampering(interfaces.plugins.PluginInterface):
                     yield (0, (str(root_hive), str(_keys), str(data_), str(value_[0])))
                 except FileNotFoundError:
                     continue
-        self.detect_tampering_attempts()
+        for _events in tampering_events_files:
+            self.detect_tampering_attempts(_events)
