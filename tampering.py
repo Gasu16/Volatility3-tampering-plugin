@@ -13,15 +13,15 @@ from typing import Any, Generator, List, Tuple, Sequence, Iterable
 from volatility3.framework import automagic, objects, constants, exceptions, interfaces, renderers, plugins
 from volatility3.framework.configuration import requirements
 #from volatility3.framework.interfaces import plugins
-from volatility3.framework.layers import registry
+#from volatility3.framework.layers import registry
 from volatility3.framework.layers.physical import BufferDataLayer
-from volatility3.framework.layers.registry import RegistryHive
+#from volatility3.framework.layers.registry import RegistryHive
 from volatility3.framework.symbols import intermed
-from volatility3.plugins.windows.registry import hivelist
+#from volatility3.plugins.windows.registry import hivelist
 from volatility3.framework.renderers import TreeGrid, conversion, format_hints
 #from volatility3.plugins import timeliner
-from volatility3.plugins.windows.registry import *
-from volatility3.plugins.windows.registry import printkey
+#from volatility3.plugins.windows.registry import *
+#from volatility3.plugins.windows.registry import printkey
 #from volatility3.framework.layers.registry import RegistryHive, RegistryFormatException
 
 vollog = logging.getLogger(__name__)
@@ -82,15 +82,15 @@ class Tampering(interfaces.plugins.PluginInterface):
     _required_framework_version = (2, 0, 0)
     _version = (1, 1, 0)
 
-    @classmethod
-    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel', architectures = ["Intel32", "Intel64"]),
-                    requirements.PluginRequirement(
-                        name = 'hivelist',
-                        plugin = hivelist.HiveList,
-                        version = (1, 0, 0)
-                    )
-                ]
+#    @classmethod
+#    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+#        return [requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel', architectures = ["Intel32", "Intel64"]),
+#                    requirements.PluginRequirement(
+#                        name = 'hivelist',
+#                        plugin = hivelist.HiveList,
+#                        version = (1, 0, 0)
+#                    )
+#                ]
     @classmethod
     def get_tampering_key(cls, root_hive, key, value):
         aReg = winreg.ConnectRegistry(None, root_hive)
