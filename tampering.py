@@ -169,12 +169,13 @@ class Tampering(interfaces.plugins.PluginInterface):
                     args_ = self.get_tampering_key(root_hive, _keys, _values)
                     data_ = args_[2] # data value name
                     value_ = args_[3] # actual type value
-                    yield (0, (str(root_hive), str(_keys), str(data_), str(value_[0])))
+                    #yield (0, (str(root_hive), str(_keys), str(data_), str(value_[0])))
                 except FileNotFoundError:
                     continue
+                yield (0, (str(root_hive), str(_keys), str(data_), str(value_[0])))
         for _events in tampering_events_files:
             try:
                 self.detect_tampering_attempts(_events)
             except Exception:
                 print("\nYou need to run this plugin as Administrator if you want to get the event logs info")
-                break
+                continue
