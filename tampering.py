@@ -119,6 +119,8 @@ class Tampering(interfaces.plugins.PluginInterface):
                 key_node.get_volatile(),
                 key_node,
             )
+            #print("\nquesto e' il result: ")
+            #print(result)
             yield result
             
             if recurse:
@@ -200,7 +202,6 @@ class Tampering(interfaces.plugins.PluginInterface):
                 else:
                     try:
                         value_data = node.decode_data()
-                        
                         if isinstance(value_data, int):
                             value_data = format_hints.MultiTypeData(
                                 value_data, encoding="utf-8"
@@ -270,6 +271,7 @@ class Tampering(interfaces.plugins.PluginInterface):
             hive_offsets = hive_offsets
         ):
             try:
+                #pdb.set_trace()
                 if key is not None:
                     node_path = hive.get_key(key, return_list=True)
                 else:
@@ -289,7 +291,7 @@ class Tampering(interfaces.plugins.PluginInterface):
                     vollog.debug(excp)
                 elif isinstance(excp, exceptions.InvalidAddressException):
                     vollog.debug(
-                        f"Inalid address identified in Hive: {hex(excp.invalid_address)}"
+                        f"Invalid address identified in Hive: {hex(excp.invalid_address)}"
                     )
                 result = (
                     0,
@@ -304,5 +306,3 @@ class Tampering(interfaces.plugins.PluginInterface):
                     ),
                 )
                 yield result
-        
-        return True
