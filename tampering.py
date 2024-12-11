@@ -41,6 +41,24 @@ tampering_keys = [
     "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates" # SignatureLastUpdated; SignatureType; SignatureUpdateCount; SignatureUpdateLastAttempted; SignatureUpdatePending;
 ]
 
+new_tampering_keys = [
+    "SOFTWARE\\Microsoft\\Windows Defender\\DisableAntiSpyware",
+    "SOFTWARE\\Microsoft\\Windows Defender\\DisableAntiVirus",
+    "SOFTWARE\\Microsoft\\Windows Defender\\IsServiceRunning",
+    "SOFTWARE\\Microsoft\\Windows Defender\\PUAProtection",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Features\\TamperProtection",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Features\\TamperProtectionSource",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Features\\TPExclusions",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\Default",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DpaDisabled",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Remediation\\Behavioral Network Blocks\\Default",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureLastUpdated",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureType",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureUpdateCount",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureUpdateLastAttempted",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureUpdatePending"
+]
+
 tampering_values = [
     "DisableAntiSpyware",
     "DisableAntiVirus",
@@ -263,46 +281,51 @@ class Tampering(interfaces.plugins.PluginInterface):
         )
 
     def _generator(self, layer_name: str, symbol_table: str, hive_offsets: List[int] = None, key: str = None, recurse: bool = False,):
+        i = 0
         for hive in hivelist.HiveList.list_hives(
             self.context,
             self.config_path,
             layer_name = layer_name,
             symbol_table = symbol_table,
             hive_offsets = hive_offsets
-        ):
-            try:
-                #pdb.set_trace()
-                if key is not None:
-                    node_path = hive.get_key(key, return_list=True)
-                else:
-                    node_path = [hive.get_node(hive.root_cell_offset)]
-                for x, y in self._printkey(hive, node_path, recurse=recurse):
-                    yield (x - len(node_path), y)
-            except (
-                exceptions.InvalidAddressException,
-                KeyError,
-                RegistryFormatException,
-            ) as excp:
-                if isinstance(excp, KeyError):
-                    vollog.debug(
-                        f"key '{key}' not found in Hive at offset {hex(hive.hive_offset)}."
+            ):
+                try:
+                    #key = "SOFTWARE\\Microsoft\\Windows Defender\\Remediation\\Behavioral Network Blocks\\Default"
+                    if i < len(new_tampering_keys):
+                        key = new_tampering_keys[i]
+                        i += 1
+                        if key in new_tampering_keys:
+                            if key is not None:
+                                node_path = hive.get_key(key, return_list=True)
+                            else:
+                                node_path = [hive.get_node(hive.root_cell_offset)]
+                            for x, y in self._printkey(hive, node_path, recurse=recurse):
+                                yield (x - len(node_path), y)
+                except (
+                    exceptions.InvalidAddressException,
+                    KeyError,
+                    RegistryFormatException,
+                ) as excp:
+                    if isinstance(excp, KeyError):
+                        vollog.debug(
+                            f"key '{key}' not found in Hive at offset {hex(hive.hive_offset)}."
+                        )
+                    elif isinstance(excp, RegistryFormatException):
+                        vollog.debug(excp)
+                    elif isinstance(excp, exceptions.InvalidAddressException):
+                        vollog.debug(
+                            f"Invalid address identified in Hive: {hex(excp.invalid_address)}"
+                        )
+                    result = (
+                        0,
+                        (
+                            renderers.UnreadableValue(),
+                            format_hints.Hex(hive.hive_offset),
+                            "Key",
+                            f"{hive.get_name()}\\" + (key or ""),
+                            renderers.UnreadableValue(),
+                            renderers.UnreadableValue(),
+                            renderers.UnreadableValue(),
+                        ),
                     )
-                elif isinstance(excp, RegistryFormatException):
-                    vollog.debug(excp)
-                elif isinstance(excp, exceptions.InvalidAddressException):
-                    vollog.debug(
-                        f"Invalid address identified in Hive: {hex(excp.invalid_address)}"
-                    )
-                result = (
-                    0,
-                    (
-                        renderers.UnreadableValue(),
-                        format_hints.Hex(hive.hive_offset),
-                        "Key",
-                        f"{hive.get_name()}\\" + (key or ""),
-                        renderers.UnreadableValue(),
-                        renderers.UnreadableValue(),
-                        renderers.UnreadableValue(),
-                    ),
-                )
-                yield result
+                    yield result
