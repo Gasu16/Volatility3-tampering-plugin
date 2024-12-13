@@ -7,7 +7,6 @@ import contextlib
 import winreg
 import win32evtlog
 import xml.etree.ElementTree as ET
-#from winevt import EventLog
 import pdb
 
 from typing import Any, Generator, List, Tuple, Sequence, Iterable
@@ -41,24 +40,6 @@ tampering_keys = [
     "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates" # SignatureLastUpdated; SignatureType; SignatureUpdateCount; SignatureUpdateLastAttempted; SignatureUpdatePending;
 ]
 
-new_tampering_keys = [
-    "SOFTWARE\\Microsoft\\Windows Defender\\DisableAntiSpyware",
-    "SOFTWARE\\Microsoft\\Windows Defender\\DisableAntiVirus",
-    "SOFTWARE\\Microsoft\\Windows Defender\\IsServiceRunning",
-    "SOFTWARE\\Microsoft\\Windows Defender\\PUAProtection",
-    "SOFTWARE\\Microsoft\\Windows Defender\\Features\\TamperProtection",
-    "SOFTWARE\\Microsoft\\Windows Defender\\Features\\TamperProtectionSource",
-    "SOFTWARE\\Microsoft\\Windows Defender\\Features\\TPExclusions",
-    "SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\Default",
-    "SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DpaDisabled",
-    "SOFTWARE\\Microsoft\\Windows Defender\\Remediation\\Behavioral Network Blocks\\Default",
-    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureLastUpdated",
-    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureType",
-    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureUpdateCount",
-    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureUpdateLastAttempted",
-    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureUpdatePending"
-]
-
 tampering_values = [
     "DisableAntiSpyware",
     "DisableAntiVirus",
@@ -74,6 +55,25 @@ tampering_values = [
     "SignatureUpdateCount",
     "SignatureUpdateLastAttempted",
     "SignatureUpdatePending"
+]
+
+new_tampering_keys = [
+    # Forse dovrei dargli come key solo "Microsoft\\Windows Defender"
+    "SOFTWARE\\Microsoft\\Windows Defender\\DisableAntiSpyware",
+    "SOFTWARE\\Microsoft\\Windows Defender\\DisableAntiVirus",
+    "SOFTWARE\\Microsoft\\Windows Defender\\IsServiceRunning",
+    "SOFTWARE\\Microsoft\\Windows Defender\\PUAProtection",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Features\\TamperProtection",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Features\\TamperProtectionSource",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Features\\TPExclusions",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\Default",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DpaDisabled",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Remediation\\Behavioral Network Blocks\\Default",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureLastUpdated",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureType",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureUpdateCount",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureUpdateLastAttempted",
+    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureUpdatePending"
 ]
 
 tampering_events_files = [
@@ -105,7 +105,13 @@ class Tampering(interfaces.plugins.PluginInterface):
                         name = 'hivelist',
                         plugin = hivelist.HiveList,
                         version = (1, 0, 0)
-                    )
+                    ),
+                     requirements.BooleanRequirement(
+                        name="recurse",
+                        description="Recurses through keys",
+                        default=True,
+                        optional=True,
+                    ),
                 ]
     @classmethod
     def get_tampering_key(cls, root_hive: RegistryHive, node_path: Sequence[objects.StructType] = None):
@@ -114,7 +120,8 @@ class Tampering(interfaces.plugins.PluginInterface):
         return node_path
     
     @classmethod
-    def get_keys(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = False)-> Generator[Tuple[int, Tuple], None, None]:
+    def get_keys(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = True,) -> Iterable[Tuple[int, bool, datetime.datetime, str, bool, interfaces.objects.ObjectInterface]]:
+        #def get_keys(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = True)-> Generator[Tuple[int, Tuple], None, None]:
         if not node_path:
             node_path = [hive.get_node(hive.root_cell_offset)]
         if not isinstance(node_path, list) or len(node_path) < 1:
@@ -149,7 +156,7 @@ class Tampering(interfaces.plugins.PluginInterface):
                         vollog.debug(excp)
                         continue
                         
-                    yield from cls.key_iterator(
+                    yield from cls.get_keys(
                         hive, node_path + [key_node], recurse=recurse
                     )
         for value_node in node.get_values():
@@ -163,7 +170,7 @@ class Tampering(interfaces.plugins.PluginInterface):
             )
             yield result
             
-    def _printkey(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = False):
+    def _printkey(self, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = True):
         for(
             depth,
             is_key,
@@ -171,7 +178,7 @@ class Tampering(interfaces.plugins.PluginInterface):
             key_path,
             volatile,
             node,
-        ) in cls.get_keys(hive, node_path, recurse):
+        ) in self.get_keys(hive, node_path, recurse):
             if is_key:
                 try:
                     key_node_name = node.get_name()
@@ -280,27 +287,28 @@ class Tampering(interfaces.plugins.PluginInterface):
             ),
         )
 
-    def _generator(self, layer_name: str, symbol_table: str, hive_offsets: List[int] = None, key: str = None, recurse: bool = False,):
-        i = 0
+    def _generator(self, layer_name: str, symbol_table: str, hive_offsets: List[int] = None, key: str = None, recurse: bool = True,):
+        #i = 0
         for hive in hivelist.HiveList.list_hives(
             self.context,
             self.config_path,
             layer_name = layer_name,
             symbol_table = symbol_table,
-            hive_offsets = hive_offsets
+            hive_offsets = hive_offsets,
             ):
+                #pdb.set_trace()
                 try:
-                    #key = "SOFTWARE\\Microsoft\\Windows Defender\\Remediation\\Behavioral Network Blocks\\Default"
-                    if i < len(new_tampering_keys):
-                        key = new_tampering_keys[i]
-                        i += 1
-                        if key in new_tampering_keys:
-                            if key is not None:
-                                node_path = hive.get_key(key, return_list=True)
-                            else:
-                                node_path = [hive.get_node(hive.root_cell_offset)]
-                            for x, y in self._printkey(hive, node_path, recurse=recurse):
-                                yield (x - len(node_path), y)
+                    #if i < len(new_tampering_keys):
+                        #key = new_tampering_keys[i]
+                        #i += 1
+                    key = "Microsoft\\Windows Defender"
+                    #if key in new_tampering_keys:
+                    if key is not None:
+                        node_path = hive.get_key(key, return_list=True)
+                    else:
+                        node_path = [hive.get_node(hive.root_cell_offset)]
+                    for x, y in self._printkey(hive, node_path, recurse=recurse):
+                        yield (x - len(node_path), y)
                 except (
                     exceptions.InvalidAddressException,
                     KeyError,
