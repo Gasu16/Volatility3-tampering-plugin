@@ -32,33 +32,7 @@ roots_hives = [
     "HKEY_DYN_DATA"
 ]
 
-tampering_keys = [
-    "SOFTWARE\\Microsoft\\Windows Defender", # DisableAntiSpyware; DisableAntiVirus; IsServiceRunning; PUAProtection;
-    "SOFTWARE\\Microsoft\\Windows Defender\\Features", # TamperProtection; TamperProtectionSource; TPExclusions;
-    "SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection", # Default; DpaDisabled;
-    "SOFTWARE\\Microsoft\\Windows Defender\\Remediation\\Behavioral Network Blocks", # Default;
-    "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates" # SignatureLastUpdated; SignatureType; SignatureUpdateCount; SignatureUpdateLastAttempted; SignatureUpdatePending;
-]
-
-tampering_values = [
-    "DisableAntiSpyware",
-    "DisableAntiVirus",
-    "IsServiceRunning",
-    "PUAProtection",
-    "TamperProtection",
-    "TamperProtectionSource",
-    "TPExclusions",
-    "Default",
-    "DpaDisabled",
-    "SignatureLastUpdated",
-    "SignatureType",
-    "SignatureUpdateCount",
-    "SignatureUpdateLastAttempted",
-    "SignatureUpdatePending"
-]
-
 new_tampering_keys = [
-    # Forse dovrei dargli come key solo "Microsoft\\Windows Defender"
     "SOFTWARE\\Microsoft\\Windows Defender\\DisableAntiSpyware",
     "SOFTWARE\\Microsoft\\Windows Defender\\DisableAntiVirus",
     "SOFTWARE\\Microsoft\\Windows Defender\\IsServiceRunning",
@@ -76,24 +50,9 @@ new_tampering_keys = [
     "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureUpdatePending"
 ]
 
-tampering_events_files = [
-    "C:\\Windows\\System32\\winevt\\Logs\\Microsoft-Windows-Windows Defender%4Operational.evtx",
-    "C:\\Windows\\System32\\winevt\\Logs\\Microsoft-Windows-SENSE%4Operational.evtx"
-]
-
-tampering_events_id = [
-    "5",
-    "5004",
-    "5007",
-    "5008",
-    "5010",
-    "5012",
-    "5013",
-    "5100",
-    "5101"
-]
-
 class Tampering(interfaces.plugins.PluginInterface):
+    """Lists the registry keys that are usually changed when a Windows Defender tampering occurs."""
+    
     _required_framework_version = (2, 0, 0)
     _version = (1, 1, 0)
     
@@ -112,15 +71,16 @@ class Tampering(interfaces.plugins.PluginInterface):
                         default=True,
                         optional=True,
                     ),
+                    requirements.BooleanRequirement(
+                        name="essentials",
+                        description="disable the recurse option",
+                        default=False,
+                        optional=True,
+                    ),
                 ]
+                
     @classmethod
-    def get_tampering_key(cls, root_hive: RegistryHive, node_path: Sequence[objects.StructType] = None):
-        node_path = [root_hive.get_node(root_hive.root_cell_offset)]
-        print(node_path)
-        return node_path
-    
-    @classmethod
-    def get_keys(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = True,) -> Iterable[Tuple[int, bool, datetime.datetime, str, bool, interfaces.objects.ObjectInterface]]:
+    def get_keys(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = True, essentials: bool = False,) -> Iterable[Tuple[int, bool, datetime.datetime, str, bool, interfaces.objects.ObjectInterface]]:
         #def get_keys(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = True)-> Generator[Tuple[int, Tuple], None, None]:
         if not node_path:
             node_path = [hive.get_node(hive.root_cell_offset)]
@@ -144,10 +104,17 @@ class Tampering(interfaces.plugins.PluginInterface):
                 key_node.get_volatile(),
                 key_node,
             )
-            #print("\nquesto e' il result: ")
-            #print(result)
             yield result
-            
+            if essentials:
+                recurse = False
+                #key = "Microsoft\\Windows Defender\\Features"
+                #key_node_name = key_node.get_name()
+                #if key_node_name in new_tampering_keys:
+                #    yield from cls.get_keys(
+                #        hive, node_path + [key_node], recurse=recurse, essentials=essentials
+                #    )
+                #else:
+                #    break
             if recurse:
                 if key_node.vol.offset not in [x.vol.offset for x in node_path]:
                     try:
@@ -157,7 +124,7 @@ class Tampering(interfaces.plugins.PluginInterface):
                         continue
                         
                     yield from cls.get_keys(
-                        hive, node_path + [key_node], recurse=recurse
+                        hive, node_path + [key_node], recurse=recurse, essentials=essentials
                     )
         for value_node in node.get_values():
             result = (
@@ -170,7 +137,7 @@ class Tampering(interfaces.plugins.PluginInterface):
             )
             yield result
             
-    def _printkey(self, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = True):
+    def _printkey(self, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = True, essentials: bool = False):
         for(
             depth,
             is_key,
@@ -178,7 +145,7 @@ class Tampering(interfaces.plugins.PluginInterface):
             key_path,
             volatile,
             node,
-        ) in self.get_keys(hive, node_path, recurse):
+        ) in self.get_keys(hive, node_path, recurse, essentials):
             if is_key:
                 try:
                     key_node_name = node.get_name()
@@ -284,11 +251,11 @@ class Tampering(interfaces.plugins.PluginInterface):
                 hive_offsets=None if offset is None else [offset],
                 key=self.config.get("key", None),
                 recurse=self.config.get("recurse", None),
+                essentials=self.config.get("essentials"),
             ),
         )
 
-    def _generator(self, layer_name: str, symbol_table: str, hive_offsets: List[int] = None, key: str = None, recurse: bool = True,):
-        #i = 0
+    def _generator(self, layer_name: str, symbol_table: str, hive_offsets: List[int] = None, key: str = None, recurse: bool = True, essentials: bool = False,):
         for hive in hivelist.HiveList.list_hives(
             self.context,
             self.config_path,
@@ -296,18 +263,13 @@ class Tampering(interfaces.plugins.PluginInterface):
             symbol_table = symbol_table,
             hive_offsets = hive_offsets,
             ):
-                #pdb.set_trace()
                 try:
-                    #if i < len(new_tampering_keys):
-                        #key = new_tampering_keys[i]
-                        #i += 1
                     key = "Microsoft\\Windows Defender"
-                    #if key in new_tampering_keys:
                     if key is not None:
                         node_path = hive.get_key(key, return_list=True)
                     else:
                         node_path = [hive.get_node(hive.root_cell_offset)]
-                    for x, y in self._printkey(hive, node_path, recurse=recurse):
+                    for x, y in self._printkey(hive, node_path, recurse=recurse, essentials=essentials):
                         yield (x - len(node_path), y)
                 except (
                     exceptions.InvalidAddressException,
