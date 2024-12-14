@@ -4,10 +4,6 @@ import os
 import json
 import codecs
 import contextlib
-import winreg
-import win32evtlog
-import xml.etree.ElementTree as ET
-import pdb
 
 from typing import Any, Generator, List, Tuple, Sequence, Iterable
 from volatility3.framework import automagic, objects, constants, exceptions, interfaces, renderers, plugins
@@ -50,6 +46,13 @@ new_tampering_keys = [
     "SOFTWARE\\Microsoft\\Windows Defender\\Signature Updates\\SignatureUpdatePending"
 ]
 
+tampering_keys = [
+    "Microsoft\\Windows Defender\\Features",
+    "Microsoft\\Windows Defender\\Real-Time Protection",
+    "Microsoft\\Windows Defender\\Remediation\\Behavioral Network Blocks",
+    "Microsoft\\Windows Defender\\Signature Updates"
+]
+
 class Tampering(interfaces.plugins.PluginInterface):
     """Lists the registry keys that are usually changed when a Windows Defender tampering occurs."""
     
@@ -81,7 +84,6 @@ class Tampering(interfaces.plugins.PluginInterface):
                 
     @classmethod
     def get_keys(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = True, essentials: bool = False,) -> Iterable[Tuple[int, bool, datetime.datetime, str, bool, interfaces.objects.ObjectInterface]]:
-        #def get_keys(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = True)-> Generator[Tuple[int, Tuple], None, None]:
         if not node_path:
             node_path = [hive.get_node(hive.root_cell_offset)]
         if not isinstance(node_path, list) or len(node_path) < 1:
@@ -107,14 +109,6 @@ class Tampering(interfaces.plugins.PluginInterface):
             yield result
             if essentials:
                 recurse = False
-                #key = "Microsoft\\Windows Defender\\Features"
-                #key_node_name = key_node.get_name()
-                #if key_node_name in new_tampering_keys:
-                #    yield from cls.get_keys(
-                #        hive, node_path + [key_node], recurse=recurse, essentials=essentials
-                #    )
-                #else:
-                #    break
             if recurse:
                 if key_node.vol.offset not in [x.vol.offset for x in node_path]:
                     try:
@@ -264,13 +258,23 @@ class Tampering(interfaces.plugins.PluginInterface):
             hive_offsets = hive_offsets,
             ):
                 try:
-                    key = "Microsoft\\Windows Defender"
-                    if key is not None:
-                        node_path = hive.get_key(key, return_list=True)
+                    if essentials:
+                        for i in range(0, len(tampering_keys)):
+                            key = tampering_keys[i]
+                            if key is not None:
+                                node_path = hive.get_key(key, return_list=True)
+                            else:
+                                node_path = [hive.get_node(hive.root_cell_offset)]
+                            for x, y in self._printkey(hive, node_path, recurse=recurse, essentials=essentials):
+                                yield (x - len(node_path), y)
                     else:
-                        node_path = [hive.get_node(hive.root_cell_offset)]
-                    for x, y in self._printkey(hive, node_path, recurse=recurse, essentials=essentials):
-                        yield (x - len(node_path), y)
+                        key = "Microsoft\\Windows Defender"
+                        if key is not None:
+                            node_path = hive.get_key(key, return_list=True)
+                        else:
+                            node_path = [hive.get_node(hive.root_cell_offset)]
+                        for x, y in self._printkey(hive, node_path, recurse=recurse, essentials=essentials):
+                            yield (x - len(node_path), y)
                 except (
                     exceptions.InvalidAddressException,
                     KeyError,
