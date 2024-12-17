@@ -5,8 +5,8 @@
 
 ### In which ways we can disable/tamper Windows Defender?
 There are many ways Defender can be tampered, most commons are:
-- sc.exe query|config|stop WinDefend
 - Edit registry key
+- sc.exe query|config|stop WinDefend
 - Run specific software like AdvancedRun utility by Nirsoft
 - taskkill command
 - SystemSettingsAdminFlows.exe, a native Windows Utility to detect Defender tampering
