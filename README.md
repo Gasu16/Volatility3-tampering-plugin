@@ -1,6 +1,6 @@
 ## A volatility plugin to detect Microsoft Windows Defender tampering
 
-### What is tampering? 
+### What is tampering?
 - It's a defense evasion technique accomplished by disabling or removing, even partially, defense tools such as Windows Defender or any other kind of AV/EDR/XDR platforms installed on a system
 
 ### In which ways we can disable/tamper Windows Defender?
@@ -13,12 +13,12 @@ There are many ways Defender can be tampered, most commons are:
 - Via WMI tasks
 - Editing/Removing files related to Windows Defender folder path
 
-### How Memory Forensics can help us to investigate over tampering
+### How Memory Forensics can help us to investigate over tampering?
 When it comes to EDR core business solutions like MS Defender, security specialists know that a fully functionally and up-to-date EDR is essential for the IT environment security, due to its advanced monitoring behaviour and analysis which can help to perform a quick response on the vast majority of threats.
 
 However, Windows Defender just like others EDRs solutions are not really immune to tampering, which kinda interferee with their functionalities and even can turn off the product, allowing malware and threats to spread across the environment and increase damages to the systems such as PC clients, Servers, Mobiles, etc...
 
-A real quick and useful move to detect if a tampering has been done is to read the correct Windows Registry values
+A real quick and useful move to detect if a tampering has been done is to read the correct Windows Registry values.
 
 ### Usage
 Tampering plugin comes with normal mode (no option, more detailed) and essential mode (through <code>--essentials</code> option) which aims to read only the essential registry keys that help to identify a tampering attempt
