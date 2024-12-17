@@ -1,40 +1,31 @@
-La prima cosa da fare come modello di output è quella di mostrare a video i valori delle chiavi di registro di Windows come il TamperProtection, etc...
+## A volatility plugin to detect Microsoft Windows Defender tampering
 
-Prendere come spunto Downloads\userassist.py o altri plugin che operano sul registro di Windows dalla pagina github
-https://github.com/volatilityfoundation/volatility3/tree/develop/volatility3/framework/plugins/windows/registry
+### What is tampering? 
+- It's a defense evasion technique accomplished by disabling or removing, even partially, defense tools such as Windows Defender or any other kind of AV/EDR/XDR platforms installed on a system
 
-A volatility plugin to detect MS Defender tampering attempts
-
-What is tampering? It's an attempt to avoid detection after compromising a machine, often doing by disable  Windows Defender, this is often done by running the sc.exe command in Windows
-
-Which OS are supported? Windows, MacOS, GNU/Linux
-
-What are the ways to disable/tamper Windows Defender?
-- https://cloudbrothers.info/en/edr-silencers-exploring-methods-block-edr-communication-part-1/
-- collect logs (event log 5013 specifically) to detect any tampering attempts
+### In which ways we can disable/tamper Windows Defender?
+There are many ways Defender can be tampered, most commons are:
 - sc.exe query|config|stop WinDefend
-- Change registry key
+- Edit registry key
 - Run specific software like AdvancedRun utility by Nirsoft
 - taskkill command
 - SystemSettingsAdminFlows.exe, a native Windows Utility to detect Defender tampering
 - Via WMI tasks
 - Editing/Removing files related to Windows Defender folder path
-- Suddenly an entire path or drive has been added to the exclusions
 
-Which information should be displayed? 
-In order to provide a full capable investigation:
-- The registry key that detects if an attempt has been made, and their value
-- Learn the most common tampering techniques from MITRE ATTACK
-- The tampering tentatives
-- Which process attempted to run the tamper and disable MS Defender
-- The timestamp
-- Full path 
-- Full command line of the process
-- The user who invoked this process 
-- The parent of the process (PPID)
-- How many threads this process has
-- Tokens and security context of this process
-- Privileges of the process who attempted the tampering
+### How Memory Forensics can help us to investigate over tampering
+When it comes to EDR core business solutions like MS Defender, security specialists know that a fully functionally and up-to-date EDR is essential for the IT environment security, due to its advanced monitoring behaviour and analysis which can help to perform a quick response on the vast majority of threats.
 
+However, Windows Defender just like others EDRs solutions are not really immune to tampering, which kinda interferee with their functionalities and even can turn off the product, allowing malware and threats to spread across the environment and increase damages to the systems such as PC clients, Servers, Mobiles, etc...
 
-In order to provide a fully functional plugin it should be done a little testing on Windows 10 and 11 machines, although testing it on MacOS and Linux environments
+A real quick and useful move to detect if a tampering has been done is to read the correct Windows Registry values
+
+### Usage
+Tampering plugin comes with normal mode (no option, more detailed) and essential mode (through <code>--essential</code> option) which aims to read only the essential registry keys that help to identify a tampering attempt
+
+<code>python3 vol.py -f memdump.dmp windows.registry.tampering</code>
+
+### Useful links
+- https://attack.mitre.org/techniques/T1562/001/
+- https://cloudbrothers.info/en/edr-silencers-exploring-methods-block-edr-communication-part-1/
+- https://www.alteredsecurity.com/post/disabling-tamper-protection-and-other-defender-mde-components
