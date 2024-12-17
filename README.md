@@ -40,7 +40,7 @@ An example of registry keys you can keep track of to detect if they've been edit
 | TamperProtectionSource | 64            |
 
 
-You can easily detect the most important key through the <code>--essentials</code> option like this:
+You can easily detect the most important keys through the <code>--essentials</code> option like this:
 
 <code>python3 vol.py -f memdump.dmp windows.registry.tampering --essentials</code>
 
