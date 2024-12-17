@@ -21,9 +21,28 @@ However, Windows Defender just like others EDRs solutions are not really immune 
 A real quick and useful move to detect if a tampering has been done is to read the correct Windows Registry values
 
 ### Usage
-Tampering plugin comes with normal mode (no option, more detailed) and essential mode (through <code>--essential</code> option) which aims to read only the essential registry keys that help to identify a tampering attempt
+Tampering plugin comes with normal mode (no option, more detailed) and essential mode (through <code>--essentials</code> option) which aims to read only the essential registry keys that help to identify a tampering attempt
 
 <code>python3 vol.py -f memdump.dmp windows.registry.tampering</code>
+
+At this point, start to search for the registry keys changes.
+
+An example of registry keys you can keep track of to detect if they've been edited are:
+
+
+| Key name               | Default value |
+| ---------------------- | ------------- |
+| DisableAntiSpyware     | 0             |
+| DisableAntiVirus       | 0             |
+| IsServiceRunning       | 1             |
+| PUAProtection          | 2             |
+| TamperProtection       | 5             |
+| TamperProtectionSource | 64            |
+
+
+You can easily detect the most important key through the <code>--essentials</code> option like this:
+
+<code>python3 vol.py -f memdump.dmp windows.registry.tampering --essentials</code>
 
 ### Useful links
 - https://attack.mitre.org/techniques/T1562/001/
